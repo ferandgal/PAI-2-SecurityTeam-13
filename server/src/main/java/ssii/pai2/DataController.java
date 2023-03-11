@@ -39,17 +39,18 @@ final static String clave = "mi_clave_secreta";
   //se ha mantenido dicha integridad.
   @PostMapping("/requestMessage")
   @CrossOrigin(origins = "*")
-  public Map<String,String> getData(@RequestBody @Valid DataDTO transferencia, String hMacCliente) throws InvalidKeyException, NoSuchAlgorithmException, IOException {
+  public Map<String,String> getData(@RequestBody @Valid DataDTO transferencia) throws InvalidKeyException, NoSuchAlgorithmException, IOException {
     String nonceServidor = dataService.extraerNonce("Servidor");
-    String hMacServidor = dataService.hashing(transferencia.toString(), nonceServidor, clave);
+    DataDTO transferData = new DataDTO(transferencia.getCuentaOrigen(), transferencia.getCuentaOrigen(), transferencia.getCantidad());
+    String hMacServidor = dataService.hashing(transferData.toString(), nonceServidor, clave);
     String nonceCliente = dataService.extraerNonce("Cliente");
-    Map<String,String> res = dataService.CompareHash(hMacServidor, hMacCliente, nonceCliente, clave);
+    Map<String,String> res = dataService.CompareHash(hMacServidor, transferencia.getClientHMAC(), nonceCliente, clave);
 
     return res;
   }
 
   //Este end-point se encarga de mostrar todos los logs de los mensajes realizados hasta el momento.
-  @GetMapping("/logs/")
+  @GetMapping("/logs")
   @CrossOrigin(origins = "http://localhost:5173")
   public JsonObject getAllLogs() {
     return dataService.getAllLogs();

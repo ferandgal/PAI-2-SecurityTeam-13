@@ -1,12 +1,18 @@
 package ssii.pai2;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.SecureRandom;
 
 import org.springframework.stereotype.Service;
 
@@ -14,103 +20,214 @@ import com.github.cliftonlabs.json_simple.JsonObject;
 
 @Service
 public class DataService {
-
-  public String generarHash(DataDTO data) throws IOException{
-    String banco = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-    System.out.println(data);
-    for (int i = 0; i < data.getToken().length(); i++) {
-        if(!banco.contains(String.valueOf(data.getToken().charAt(i)))) {
-            return "Caracter no permitido";
-        }
-    }
     
-    String cadenaBase64 = "";
-    String entradaOriginal = data.getFichero();
-    String cadenaCodificada = buscarFichero(entradaOriginal);
-    
-    if(data.getReto() == RetoEnum.RETO1) {
-    cadenaBase64 = cadenaCodificada + data.getToken();
-    }else if(data.getReto() == RetoEnum.RETO2){
-    cadenaBase64 = data.getToken() + cadenaCodificada;
-    } else {
-      return "Tipo de reto no permitido";
-    }
-
-    String hash = hashUtils.sha256(cadenaBase64);
-    
-  
-    return hash;
-  }
-
-  public static ArrayList<String> findAllFilesInFolder(File folder) {
-		ArrayList<String> listaFicheros = new ArrayList<>();
-        for (File file : folder.listFiles()) {
-			if (!file.isDirectory()) {
-                listaFicheros.add(file.toString());
-            } else {
-				findAllFilesInFolder(file);
-			}
-		}
-        return listaFicheros;
-	}
-
-    public static String buscarFichero(String nombre) throws IOException{
+    //Esta función se va a encargar de guardar en una carpeta un nonce, puede ser por parte del cliente 
+    //como del servidor.
+    public void SaveNonce(String nonce, String host) throws IOException{
         
-        File folder = new File("./PAI-1/pai1/src/main/resources/Ficheros");
+        //Accedemos a la ruta de la carpeta
+        String rutaArchivo = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\nonces" + host + "\\" + nonce;
+        System.out.println(rutaArchivo);
+        File archivo = new File(rutaArchivo);
+        
+        //Guardamos el nonce en dicha carpeta.
+        archivo.createNewFile();
+        
+        //Y escribimos en el interior de la carpeta el nombre del log.
+        FileWriter escritor = new FileWriter(archivo);
+        escritor.write(nonce);
+        escritor.close();
+    }
 
-        ArrayList<String> listaFicheros = findAllFilesInFolder(folder);
-        int numFicheros = listaFicheros.size();
-        Collections.sort(listaFicheros);
-        String url = ".\\PAI-1\\pai1\\src\\main\\resources\\Ficheros\\";
-        nombre = url.concat(nombre).concat(".txt");
-        String fichero = busquedaBinaria(listaFicheros, nombre, 0, numFicheros-1);
-        Path filePath = Path.of(fichero);
-        String content = Files.readString(filePath, StandardCharsets.UTF_8);
+    //Esta función se va a encargar de generar un nonce en la parte del servidor.
+    public String GenerarNonce() throws IOException {
+        SecureRandom random = new SecureRandom();
+        // Tamaño del nonce en bytes
+        byte[] nonce = new byte[16]; 
+        random.nextBytes(nonce);
+        //Lo codificamos en Base64
+        String nonceBase64 = Base64.getEncoder().encodeToString(nonce);
+        //Procedemos a guardar el nonce.
+        SaveNonce(nonceBase64.replace("/", "_"), "Servidor");
+        
+        return nonceBase64;
+    }
 
-        return (Base64.getEncoder().encodeToString(content.getBytes()));
+    //Esta funcion se va a encargar de acceder al nonce que se encuentra almacenado en una carpeta y devolverlo
+    //para trabajar con él.
+    public String extraerNonce(String host){
+        
+        List<String> l = new ArrayList<String>();
+        String ruta = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\";
+        File folder = new File(ruta + "nonces" + host + "\\");
+
+
+        File[] files = folder.listFiles();
+
+        for (File file : files) {
+            l.add(file.getName());
+        }
+
+        return l.get(0);
+    }
+
+    //Esta función se va a encargar de eliminar un nonce que se encuentra almacenado en una carpeta
+    public void eliminarNonce(String host){
+        String ruta = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\";
+        File folder = new File(ruta + "nonces" + host + "\\");
+
+
+        File[] files = folder.listFiles();
+
+        for (File file : files) {
+            file.delete();
+        }
     }
 
 
-
-
-    public static String busquedaBinaria(ArrayList<String> res, String nombre, int izquierda, int derecha){
-        if (izquierda > derecha){
-            return ("No existe");
-        }
-
-        int indiceElemMedio = (int) Math.floor((izquierda+derecha) / 2);
-        String archivoMedio = res.get(indiceElemMedio).toString();
-
-
-        int comparacion = nombre.compareTo(archivoMedio);
-
-        if(comparacion == 0){
-            return archivoMedio;
-        }
-
-        if(comparacion < 0){
-            derecha = indiceElemMedio - 1;
-            String busqueda = busquedaBinaria(res, nombre, izquierda, derecha);
-            return busqueda;
-        }
-
-        else{
-            izquierda = indiceElemMedio + 1;
-            String busqueda = busquedaBinaria(res, nombre, izquierda, derecha);
-            return busqueda;
-        }
-
-    }
-
-  public JsonObject getAll() {
-    JsonObject json = new JsonObject();
-    json.put("fichero1", "clients-emails");
-    json.put("fichero2", "presupuesto2020");
-    json.put("fichero3", "coches");
-    json.put("fichero4", "notasSSII");
-    json.put("fichero5", "preciosIVA");
-    json.put("fichero6", "confidencial");
-    return json;
-  }
-  
+    //Esta función se encarga realizar el hmac usando SHA-256.
+    public String hashing(String mensaje,String nonce,String clave) throws NoSuchAlgorithmException, InvalidKeyException {
+        
+        //Le concatenamos al mensaje original el nonce ya sea el del cliente o el del servidor.
+        String mensajeFinal = mensaje + nonce;
+        
+        //Generamos la clave secreta
+        byte[] keyBytes = clave.getBytes();
+        SecretKeySpec secretKeySpec = new SecretKeySpec(keyBytes, "HmacSHA256");
+        
+        //Realizamos hashing.
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(secretKeySpec);
+        mac.update(mensajeFinal.getBytes());
+        byte[] macResult = mac.doFinal();
+        
+        //Encodeamos el hmac a base64 y lo devolvemos.
+        String mac64 = Base64.getEncoder().encodeToString(macResult);
+        return mac64;
+    
 }
+    
+    //Esta función se encarga de comparar los hashes para saber si se ha modificado la integridad del mensaje.
+    //Una vez se ha realizado la comprobación, se genera un log y se devuelve un hmac con la respuesta usando el nonce del cliente.
+    public Map<String,String> CompareHash(String hmac,String hmacCliente,String nonceCliente,String clave) throws NoSuchAlgorithmException, InvalidKeyException, IOException {
+        Map<String,String> res = new HashMap<String,String>();
+        
+            //En el caso de que sean iguales registramos que todo ha salido bien, generamos el log y devolvemos la respuesta correspondiente.
+            if(hmacCliente.equals(hmac)) {
+                
+                //Especificamos la ruta del log.
+                String nombreLog =hmacCliente.replace("/", "_") + "-" +LocalDateTime.now().toString().replace(":", "_") + ".log";
+                String rutaArchivo = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\acceptedLogs" + "\\" + nombreLog;
+                System.out.println(rutaArchivo);
+                File archivo = new File(rutaArchivo);
+                
+                //Creamos el log.
+                archivo.createNewFile();
+                
+                FileWriter escritor = new FileWriter(archivo);
+                escritor.write(nombreLog);
+                escritor.close();
+
+
+                //Generamos la respuesta.
+                String respuesta ="200 OK, ";
+                res.put(respuesta, hashing(respuesta,nonceCliente,clave));
+                
+                //Tras haber almacenado el mensaje, procedemos a eliminar el nonce del cliente y del servidor.
+                eliminarNonce("Servidor");
+                eliminarNonce("Cliente");
+
+                return res;             	
+                
+            //En el caso de que no sean iguales registramos que se ha modificado la integridad del mensaje, generamos el log y devolvemos la respuesta correspondiente.
+            }else {
+                
+                //Especificamos la ruta del log.
+                String nombreLog =hmacCliente.replace("/", "_") + "-" +LocalDateTime.now().toString().replace(":", "_") + ".log";
+                String rutaArchivo = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\deniedLogs" + "\\"+nombreLog;
+                File archivo = new File(rutaArchivo);
+                
+                //Creamos el log.
+                archivo.createNewFile();	
+                
+                //Generamos la respuesta.
+                String respuesta = "Se ha alterado la integridad del mensaje, ";
+                res.put(respuesta, hashing(respuesta,nonceCliente,clave));
+
+                //Tras haber almacenado el mensaje, procedemos a eliminar el nonce del cliente y del servidor.
+                eliminarNonce("Servidor");
+                eliminarNonce("Cliente");
+
+                return res;
+            }
+    }
+
+    //Esta función se encarga de devolver los log de los mensajes que han sido aceptados y por lo tanto
+    //se ha mantenido su integridad.
+    public List<String> logsAccepted(){
+        List<String> l = new ArrayList<String>();
+        String ruta = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\";
+        File folder = new File(ruta + "acceptedLogs\\");
+
+
+        File[] files = folder.listFiles();
+
+        for (File file : files) {
+            l.add(file.getName());
+        }
+        return l;
+    }
+    
+    //Esta función se encarga de devolver los log de los mensajes que han sido denegados y por lo tanto
+    //no se ha mantenido su integridad.
+    public List<String> logsDenied(){
+        List<String> l = new ArrayList<String>();
+        String ruta = ".\\PAI-2-SecurityTeam-13\\server\\src\\main\\resources\\";
+        File folder = new File(ruta + "deniedLogs\\");
+
+
+        File[] files = folder.listFiles();
+
+        for (File file : files) {
+            l.add(file.getName());
+        }
+        return l;
+    }
+
+    //Esta función se trata de un JSON que devuelve todos los logs de los mensajes que se han realizado
+    //entre el cliente y el servidor.
+    public JsonObject getAllLogs() {
+        List<String> logsAcep = logsAccepted();
+        List<String> logsDeni = logsDenied();
+        JsonObject json = new JsonObject();
+
+        for (int log = 0; log < logsAcep.size(); log++) {
+            json.put("Log Accepted"+ " " + log , logsAcep.get(log));
+        }
+
+        for (int log = 0; log < logsDeni.size(); log++) {
+            json.put("Log Denied"+ " " + log , logsDeni.get(log));
+        }
+
+        return json;
+      }
+
+      //Esta función es un JSON que se encarga de devolver el KPI de los mensajes, y además nos muestra
+      //el número total de mensajes que se han enviado.
+      public JsonObject getKPI() {
+
+        List<String> logsAcep = logsAccepted();
+        List<String> logsDeni = logsDenied();
+        JsonObject json = new JsonObject();
+
+        Integer totalLogs = logsAcep.size() + logsDeni.size();
+        json.put("Número total de envíos", totalLogs);
+        Float KPI = (float) (logsAcep.size())/totalLogs;
+        json.put("KPI", KPI);
+
+        return json;
+      }
+}
+
+  
+

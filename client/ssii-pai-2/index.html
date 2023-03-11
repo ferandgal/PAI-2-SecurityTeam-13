@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <link href="style.css" rel="stylesheet" type="text/css">
-  <title>SSII-PAI-1</title>
+  <title>SSII-PAI-2</title>
 </head>
 <r>
   <div class="header">
-    <h1>INSEGUS</h1>
-    <h2>Mantenimiento de integridad en la nube no confiable</h2>
+    <img class="logo-insegus" src="./public/logoInsegus.png" alt="Logo Insegus">
+    <h2>Secure financial transactions</h2>
   </div>
   <div class="buscador">
     <section class ="formulario">
       <ul class="hidden" role='listbox' aria-label='Search for a country'></ul>
-      <input class="input-search" placeholder="Search a file" aria-label='Search for a country' aria-autocomplete='both' aria-controls='autocomplete-results' autofocus>
-      <input class="input-token" placeholder="Escribe el token">
-      <input class="input-challenge" type="number" placeholder="Tipo de reto">
-      <button onclick="getData()">Obtener Hash</button>
-      <p class="code">HashCode:</p>
+      <input class="input-search" placeholder="Enter origin bank account" autofocus>
+      <input class="input-token" placeholder="Enter destiny bank account">
+      <input class="input-challenge" type="number" placeholder="0€">
+      <button onclick="sendClientNonce()">Send transaction</button>
       </ul>
     </section>
     </div>

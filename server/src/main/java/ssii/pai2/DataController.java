@@ -28,7 +28,7 @@ final static String clave = "mi_clave_secreta";
 
   //Este end-point se encarga de recibir el nonce enviado por el cliente y responder con su propio nonce.
   @PostMapping("/requestNonce")
-  @CrossOrigin(origins = "http://localhost:5173")
+  @CrossOrigin(origins = "*")
   public String getData(@RequestBody @Valid String nonce) throws IOException {
     dataService.SaveNonce(nonce, "Cliente");
     return dataService.GenerarNonce();
@@ -38,7 +38,7 @@ final static String clave = "mi_clave_secreta";
   //Este end-point responderá con un 200 OK si se ha mantenido la integridad, o con un mensaje de error si no 
   //se ha mantenido dicha integridad.
   @PostMapping("/requestMessage")
-  @CrossOrigin(origins = "http://localhost:5173")
+  @CrossOrigin(origins = "*")
   public Map<String,String> getData(@RequestBody @Valid DataDTO transferencia, String hMacCliente) throws InvalidKeyException, NoSuchAlgorithmException, IOException {
     String nonceServidor = dataService.extraerNonce("Servidor");
     String hMacServidor = dataService.hashing(transferencia.toString(), nonceServidor, clave);

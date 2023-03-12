@@ -30,7 +30,7 @@ public class DataDTO {
     this.cantidad = cantidad;
   }
 
-
+  public DataDTO() {}
 
   public String getCuentaOrigen() {
     return cuentaOrigen;

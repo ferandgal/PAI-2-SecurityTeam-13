@@ -11,14 +11,13 @@
     <h2>Secure financial transactions</h2>
   </div>
   <div class="buscador">
-    <section class ="formulario">
-      <ul class="hidden" role='listbox' aria-label='Search for a country'></ul>
-        <input class="input-search" placeholder="Enter origin bank account" autofocus>
-        <input class="input-token" placeholder="Enter destiny bank account">
-        <input class="input-challenge" type="number" placeholder="0€">
-        <button onclick="generarHMAC()">Send transaction</button>
+    <form onsubmit="sendTransaction()" class ="formulario">
+        <input class="input-search" placeholder="Enter origin bank account" autofocus required>
+        <input class="input-token" placeholder="Enter destiny bank account" required>
+        <input class="input-challenge" type="number" placeholder="0€" required min="20">
+        <button type="submit">Send transaction</button>
       </ul>
-    </section>
+    </form>
     </div>
   </div>
 </body>

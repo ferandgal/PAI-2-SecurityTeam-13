@@ -36,8 +36,6 @@ function sendClientNonce() {
     body: generarNonce()
   }
 
-  console.log(requestOptions)
-
   fetch('http://localhost:8080/requestNonce', requestOptions)
     .then((res) => res.text())
     .then((serverNonce) => {
@@ -49,6 +47,7 @@ function sendClientNonce() {
 
 // Esta función permitirá enviar al servidor la información de la transacción así como hacer un input validation
 async function sendTransaction() {
+  event.preventDefault();
   // En este objeto se recoge la información del formulario
   const transaction = {
     cuentaOrigen: document.querySelector(".input-search").value,
@@ -63,23 +62,23 @@ async function sendTransaction() {
     clientHMAC: '',
   }
 
-  const requestOptions = {
-    method: 'POST',
-    headers: headers_,
-    body: JSON.stringify(finalTransaction)
-  }
-
   sendClientNonce();
   generateHMAC(transaction, this.serverNonce)
     .then(hmac => {
       finalTransaction.clientHMAC = hmac;
+      const requestOptions = {
+        method: 'POST',
+        headers: headers_,
+        body: JSON.stringify(finalTransaction)
+      }
+      console.log(finalTransaction);
       fetch(`http://localhost:8080/requestMessage`, requestOptions)
-      .then((res) => res.text())
-      .then((data) => {
-        console.log(requestOptions.body)
-        console.log(data)
-        alert(`${data}`)
-      })
+        .then((res) => res.text())
+        .then((data) => {
+          console.log(requestOptions.body)
+          console.log(data)
+          alert(`${data}`)
+        })
     });
 }
 

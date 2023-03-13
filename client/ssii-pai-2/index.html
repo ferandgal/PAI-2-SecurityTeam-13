@@ -11,7 +11,7 @@
     <h2>Secure financial transactions</h2>
   </div>
   <div class="buscador">
-    <form onsubmit="sendTransaction()" class ="formulario">
+    <form onsubmit="makeBankTransaction()" class ="formulario">
         <input class="input-search" placeholder="Enter origin bank account" autofocus required>
         <input class="input-token" placeholder="Enter destiny bank account" required>
         <input class="input-challenge" type="number" placeholder="0€" required min="20">
@@ -23,3 +23,4 @@
 </html>
 
 <script src="main.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>

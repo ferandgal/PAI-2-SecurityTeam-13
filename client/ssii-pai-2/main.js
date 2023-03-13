@@ -1,17 +1,32 @@
 // Estas variable nos va a permitir almacenar todos los nonces de las transacciones activas
 // en la caché (localStorage) del navegador
-let clientNonces = [];
-let serverNonces = [];
-let serverNonce = '';
-let hash = '';
-let nonce = '';
+class transferDataObject {
+  constructor (nonceCliente, nonceServidor, transferencia, hmac) {
+    this.nonceCliente = nonceCliente;
+    this.nonceServidor = nonceServidor;
+    this.transferencia = transferencia;
+    this.hmac = hmac;
+  }
+}
+
 const SERVER_URL = 'http://localhost:8080/'
-const headers_ = {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  'Access-Control-Allow-Origin': 'http://localhost:5173/',
-  'mode': 'no-cors',
-  'Access-Control-Allow-Credentials': 'true',
+async function requestAPI(endpoint, method, body) {
+  const headers_ = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Access-Control-Allow-Origin': 'http://localhost:5173/',
+    'mode': 'no-cors',
+    'Access-Control-Allow-Credentials': 'true',
+  }
+
+  const requestOptions = {
+    method: method,
+    headers: headers_,
+    body: body
+  }
+
+  const response = await fetch(SERVER_URL + endpoint, requestOptions);
+  return response;
 }
 
 
@@ -26,29 +41,8 @@ function generarNonce() {
   return btoa(nonce);
 }
 
-// Esta función permite generar el nonce del cliente, mandarsela al servidor y recibir el nonce del servidor
-function sendClientNonce() {
-
-  const requestOptions = {
-    method: 'POST',
-
-    headers: headers_,
-    body: generarNonce()
-  }
-
-  fetch('http://localhost:8080/requestNonce', requestOptions)
-    .then((res) => res.text())
-    .then((serverNonce) => {
-      this.serverNonce = serverNonce;
-      serverNonces.push(serverNonce);
-      localStorage.setItem('serverNonces', JSON.stringify(serverNonces));
-    });
-}
-
-// Esta función permitirá enviar al servidor la información de la transacción así como hacer un input validation
-async function sendTransaction() {
+function makeBankTransaction() {
   event.preventDefault();
-  // En este objeto se recoge la información del formulario
   const transaction = {
     cuentaOrigen: document.querySelector(".input-search").value,
     cuentaDestino: document.querySelector(".input-token").value,
@@ -56,29 +50,25 @@ async function sendTransaction() {
   }
 
   const finalTransaction = {
-    cuentaOrigen: document.querySelector(".input-search").value,
-    cuentaDestino: document.querySelector(".input-token").value,
-    cantidad: document.querySelector(".input-challenge").value,
+    messageBase64: '',
     clientHMAC: '',
   }
 
-  sendClientNonce();
-  generateHMAC(transaction, this.serverNonce)
-    .then(hmac => {
-      finalTransaction.clientHMAC = hmac;
-      const requestOptions = {
-        method: 'POST',
-        headers: headers_,
-        body: JSON.stringify(finalTransaction)
-      }
-      console.log(finalTransaction);
-      fetch(`http://localhost:8080/requestMessage`, requestOptions)
-        .then((res) => res.text())
-        .then((data) => {
-          console.log(requestOptions.body)
-          console.log(data)
-          alert(`${data}`)
-        })
+  const nonceCliente = generarNonce();
+  console.log(nonceCliente);
+  requestAPI('requestNonce', 'POST', nonceCliente)
+    .then(serverNonce => serverNonce.text())
+    .then(serverNonce => {
+      console.log('Server Nonce: ' + serverNonce)
+      generateHMAC(transaction, serverNonce)
+        .then(hmac => {
+          console.log('Código HMAC: ' + hmac);
+          finalTransaction.messageBase64 = btoa(JSON.stringify(transaction));
+          finalTransaction.clientHMAC = hmac;
+          console.log(finalTransaction);
+          requestAPI('requestMessage', 'POST', finalTransaction)
+            .then(response => console.log(response));
+        });
     });
 }
 
@@ -90,26 +80,16 @@ function generateHMAC(obj, str) {
 
   // Concatenar el resultado con el string dado
   const concatenated = objB64 + str;
-
   // Generar el hash del resultado concatenado usando SHA-256
   return sha256(concatenated)
 }
 
 async function sha256(str) {
-  // Convertimos la cadena de entrada a un array de bytes
-  const msgBuffer = new TextEncoder().encode(str);
-  
-  // Calculamos el hash SHA-256 del mensaje utilizando la API de crypto del navegador
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  
-  // Convertimos el resultado a un array de bytes
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  
-  // Convertimos el array de bytes en un string hexadecimal
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-  
-  // Devolvemos el hash en formato string
-  return hashHex;
+
+  const secretKey = 'my-secret-key';
+  const hmac = CryptoJS.HmacSHA256(str, secretKey);
+
+  return btoa(hmac)
 }
 
 

@@ -41,9 +41,12 @@ final static String clave = "mi_clave_secreta";
   @CrossOrigin(origins = "*")
   public Map<String,String> getData(@RequestBody @Valid DataDTO transferencia) throws InvalidKeyException, NoSuchAlgorithmException, IOException {
     String nonceServidor = dataService.extraerNonce("Servidor");
-    DataDTO transferData = new DataDTO(transferencia.getCuentaOrigen(), transferencia.getCuentaOrigen(), transferencia.getCantidad());
-    String hMacServidor = dataService.hashing(transferData.toString(), nonceServidor, clave);
+    String transferData = transferencia.getMessageBase64();
+    System.out.println("Mensaaje Base64: " + transferData);
+    String hMacServidor = dataService.hashing(transferData, nonceServidor, clave);
     String nonceCliente = dataService.extraerNonce("Cliente");
+    System.out.println("HMAC Servidor " + hMacServidor);
+    System.out.println("HMAC CLIENTE: " + transferencia.getClientHMAC());
     Map<String,String> res = dataService.CompareHash(hMacServidor, transferencia.getClientHMAC(), nonceCliente, clave);
 
     return res;
